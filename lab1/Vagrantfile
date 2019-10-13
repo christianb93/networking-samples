@@ -1,0 +1,15 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+Vagrant.configure("2") do |config|
+
+  # We set up one box, without any networking options
+  # This will establish one interface on the guest machine,
+  # using NAT networking and a forwarding rule for incoming SSH traffic
+  config.vm.define "boxA" do |boxA|
+    boxA.vm.box = "ubuntu/bionic64"
+  end
+
+
+end
