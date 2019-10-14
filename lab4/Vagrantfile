@@ -1,0 +1,29 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+Vagrant.configure("2") do |config|
+
+  # Uncomment this if you want to bring up
+  # the  machines with a GUI
+  #config.vm.provider "virtualbox" do |v|
+  #  v.gui = true
+  #end
+
+
+  # We set up one machine, with a default NAT interface and a private network
+  config.vm.define "boxA" do |boxA|
+    boxA.vm.box = "ubuntu/bionic64"
+    boxA.vm.network "private_network", ip: "192.168.50.4",
+    virtualbox__intnet: "myNetwork"
+  end
+  # and a second machine with a NAT interface and connected to the same
+  # private network
+  config.vm.define "boxB" do |boxB|
+    boxB.vm.box = "ubuntu/bionic64"
+    boxB.vm.network "private_network", ip: "192.168.50.5",
+    virtualbox__intnet: "myNetwork"
+  end
+
+
+end
