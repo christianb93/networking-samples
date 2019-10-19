@@ -14,6 +14,7 @@ Vagrant.configure("2") do |config|
   # The first machine - boxA - has a NAT device as usual and is connected to the
   # private network myNetworkA, using the IP network 192.168.50.0
   config.vm.define "boxA" do |boxA|
+    boxA.vm.hostname = "boxA"
     boxA.vm.box = "ubuntu/bionic64"
     boxA.vm.network "private_network", ip: "192.168.50.4",
       virtualbox__intnet: "myNetworkA"
@@ -29,6 +30,7 @@ Vagrant.configure("2") do |config|
   # To enable promiscuity mode on the VM level, we use a customization
   # hool
   config.vm.define "boxB" do |boxB|
+    boxB.vm.hostname = "boxB"
     boxB.vm.box = "ubuntu/bionic64"
     boxB.vm.network "private_network", ip: "192.168.50.5",
       virtualbox__intnet: "myNetworkA"
@@ -49,6 +51,7 @@ Vagrant.configure("2") do |config|
   end
   # The third machine - boxC - is connected to the second network
   config.vm.define "boxC" do |boxC|
+    boxC.vm.hostname = "boxC"    
     boxC.vm.box = "ubuntu/bionic64"
     boxC.vm.network "private_network", ip: "192.168.60.4",
       virtualbox__intnet: "myNetworkB"
@@ -56,7 +59,7 @@ Vagrant.configure("2") do |config|
     # the machine
     boxC.vm.provision "ansible", run: "always" do |ansible|
       ansible.playbook = "boxC.yaml"
-      ansible.compatibility_mode = "2.0"      
+      ansible.compatibility_mode = "2.0"
     end
   end
 
