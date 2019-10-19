@@ -1,0 +1,36 @@
+---
+  # This playbook will be executed on boxB. It will
+  # set up a bridging device connection enp0s8 and enp0s9
+- name: Set up bridge
+  hosts: all
+  become: yes
+  tasks:
+  - name: Install bridge-utils
+    apt:
+      state: latest
+      update_cache: yes
+      force_apt_get: yes
+      name: bridge-utils
+  - name: See whether bridge exists
+    stat:
+      path: /sys/devices/virtual/net/myBridge
+    register: bridge_stat_results
+    # To make the script idempotent, we delete the
+    # bridge if it has already been created
+  - name: Delete bridge if it exists
+    shell: |
+      ifconfig myBridge down
+      brctl delbr myBridge
+    when: bridge_stat_results.stat.exists == True
+    # Now continue to set up bridge and devices
+  - name: Add bridge
+    shell: brctl addbr myBridge
+  - name: Set ports into promiscuity mode
+    shell: |
+      ifconfig enp0s8 promisc 0.0.0.0
+      ifconfig enp0s9 promisc 0.0.0.0
+  - name: Add ports to bridge and bring bridge up
+    shell: |
+      brctl addif myBridge enp0s8
+      brctl addif myBridge enp0s9
+      ifconfig myBridge up

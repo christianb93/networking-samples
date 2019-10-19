@@ -1,0 +1,10 @@
+---
+  # This playbook will be executed on boxA. It will
+  # set the IP address of the enp0s8 device to
+  # 192.168.50.4 with netmask 255.255.0.0
+- name: Set up networking
+  hosts: all
+  become: yes
+  tasks:
+  - name: Run ifconfig
+    shell: ifconfig enp0s8 netmask 255.255.0.0 192.168.50.4
