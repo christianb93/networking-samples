@@ -1,0 +1,46 @@
+---
+  # This playbook will be executed on boxB.
+- name: Set up networking
+  hosts: all
+  become: yes
+  tasks:
+  - name: Install vlan package
+    apt:
+      update_cache: yes
+      force_apt_get: yes
+      state: latest
+      name: vlan
+  - name: See whether first VLAN device exists
+    stat:
+      path: /sys/devices/virtual/net/enp0s8.100
+    register: vlan_stat_results
+    # To make the script idempotent, we delete the
+    # VLAN device if it has already been created
+  - name: Delete first VLAN device if it exists
+    shell: |
+      vconfig rem enp0s8.100
+    when: vlan_stat_results.stat.exists == True
+  - name: Add VLAN device on enp0s8 with VLAN ID 100
+    shell:
+      vconfig add enp0s8 100
+  - name: Assign IP address and bring device up
+    shell: |
+      ip addr add 192.168.60.5/24 dev enp0s8.100
+      ip link set enp0s8.100 up
+  - name: See whether second VLAN device exists
+    stat:
+      path: /sys/devices/virtual/net/enp0s8.200
+    register: vlan_stat_results
+    # To make the script idempotent, we delete the
+    # VLAN device if it has already been created
+  - name: Delete second VLAN device if it exists
+    shell: |
+      vconfig rem enp0s8.200
+    when: vlan_stat_results.stat.exists == True
+  - name: Add VLAN device on enp0s8 with VLAN ID 200
+    shell:
+      vconfig add enp0s8 200
+  - name: Assign IP address and bring device up
+    shell: |
+      ip addr add 192.168.70.5/24 dev enp0s8.200
+      ip link set enp0s8.200 up

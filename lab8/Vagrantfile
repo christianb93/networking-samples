@@ -1,0 +1,61 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+
+Vagrant.configure("2") do |config|
+
+  # Uncomment this if you want to bring up
+  # the  machines with a GUI
+  #config.vm.provider "virtualbox" do |v|
+  #  v.gui = true
+  #end
+
+  # We set up three machines - boxA, boxB, boxC - which all have a NAT device
+  # and a second device, being attached to the same internal network.
+  # We then establish two VLANs with VLAN IDs 100 and 200, each of them connecting two
+  # Ethernet devices
+  # We need to make sure that the devices are allowed to switch into promiscuous mode
+  # as the VLAN code requires this
+
+  config.vm.define "boxA" do |boxA|
+    boxA.vm.hostname = "boxA"
+    boxA.vm.box = "ubuntu/bionic64"
+    boxA.vm.network "private_network", ip: "192.168.50.4", virtualbox__intnet: "myNetwork"
+    boxA.vm.provider "virtualbox" do |v|
+      v.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    end
+    boxA.vm.provision "ansible", run: "always" do |ansible|
+      ansible.playbook = "boxA.yaml"
+      ansible.compatibility_mode = "2.0"
+    end
+  end
+
+
+  config.vm.define "boxB" do |boxB|
+    boxB.vm.hostname = "boxB"
+    boxB.vm.box = "ubuntu/bionic64"
+    boxB.vm.network "private_network", ip: "192.168.50.5", virtualbox__intnet: "myNetwork"
+    boxB.vm.provider "virtualbox" do |v|
+      v.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    end
+    boxB.vm.provision "ansible", run: "always" do |ansible|
+      ansible.playbook = "boxB.yaml"
+      ansible.compatibility_mode = "2.0"
+    end
+  end
+
+  config.vm.define "boxC" do |boxC|
+    boxC.vm.hostname = "boxC"
+    boxC.vm.box = "ubuntu/bionic64"
+    boxC.vm.network "private_network", ip: "192.168.50.6", virtualbox__intnet: "myNetwork"
+    boxC.vm.provider "virtualbox" do |v|
+      v.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    end
+    boxC.vm.provision "ansible", run: "always" do |ansible|
+      ansible.playbook = "boxC.yaml"
+      ansible.compatibility_mode = "2.0"
+    end
+  end
+
+
+end
