@@ -1,0 +1,23 @@
+---
+  # This playbook will be executed on boxA.
+- name: Set up networking
+  hosts: all
+  become: yes
+  tasks:
+  - name: See whether VXLAN device exists
+    stat:
+      path: /sys/devices/virtual/net/vxlan0
+    register: vxlan_stat_results
+    # To make the script idempotent, we delete the
+    # VXLAN device if it has already been created
+  - name: Delete XVLAN device if it exists
+    shell: |
+      ip link del vxlan0
+    when: vxlan_stat_results.stat.exists == True
+  - name: Add VXLAN device on enp0s8 with VNI 100
+    shell:
+      ip link add type vxlan id 100 remote 192.168.50.5 dstport 4789 dev enp0s8
+  - name: Assign IP address and bring up device
+    shell: |
+      ip addr add 192.168.60.4/24 dev vxlan0
+      ip link set vxlan0 up
