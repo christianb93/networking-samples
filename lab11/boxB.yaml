@@ -55,7 +55,7 @@
       detach: yes
       image: "{{ image }}"
       name: web4
-      network_mode: none      
+      network_mode: none
       state: started
     register: docker_out
   - name: Capture PID of container
@@ -80,12 +80,23 @@
 
 
   # Now set set up the actual bridge and add the two
-  # VETH interfaces
-  - name: Delete OVS bridge if it exists
-    shell: |
-      ovs-vsctl --if-exists del-br myBridge
-  - name: Create OVS bridge myBridge and add port web3_veth1 and web4_veth1
-    shell: ovs-vsctl add-br myBridge -- add-port myBridge web3_veth1 -- add-port myBridge web4_veth1
+  # VETH interfaces. We use the OVS module, if we wanted to do
+  # this manually, we would need to run
+  # ovs-vsctl --if-exists del-br myBridge
+  # ovs-vsctl add-br myBridge -- add-port myBridge web3_veth1 -- add-port myBridge web4_veth1
+  - name: Create OVS bridge myBridge
+    openvswitch_bridge:
+      bridge: myBridge
+      state: present
+  - name: Add ports to bridge
+    openvswitch_port:
+      bridge: myBridge
+      port: "{{ item }}"
+      state: present
+      set: "interface {{ item }}"
+    loop:
+      - web3_veth1
+      - web4_veth1
 
 
   # Assign IP address to both veth endpoints and bring all devices up
@@ -101,5 +112,11 @@
 
 
   # Finally we add a VXLAN port to establish a tunnel via the enp0s8 device
+  # This corresponds to the command
+  # ovs-vsctl add-port myBridge vxlan0 -- set interface vxlan0 type=vxlan options:remote_ip=192.168.50.4  options:dst_port=4789 options:ttl=5
   - name: Add VXLAN port vxlan0
-    shell: ovs-vsctl add-port myBridge vxlan0 -- set interface vxlan0 type=vxlan options:remote_ip=192.168.50.4 options:dst_port=4789 options:ttl=5
+    openvswitch_port:
+      bridge: myBridge
+      state: present
+      port: vxlan0
+      set: "interface vxlan0 type=vxlan options:remote_ip=192.168.50.4  options:dst_port=4789 options:ttl=5"
