@@ -1,0 +1,105 @@
+---
+  # This playbook will be executed on boxB.
+- name: Set up networking
+  hosts: all
+  become: yes
+  vars:
+    image: christianb93/networking
+  tasks:
+  - name: Install Open vswitch and Docker
+    apt:
+      name: "{{ item }}"
+      update_cache: yes
+      force_apt_get: yes
+    loop:
+      - openvswitch-switch
+      - docker.io
+      - python3-pip
+  - name: Install docker module
+    shell:
+      pip3 install docker
+  # We will now bring up an NGINX container called web1, create a virtual
+  # VETH pair and move one part into the container
+  - name: Start a docker container
+    docker_container:
+      auto_remove: yes
+      detach: yes
+      image: "{{ image }}"
+      name: web3
+      network_mode: none
+      state: started
+    register: docker_out
+  - name: Capture PID of container
+    set_fact:
+      web3PID: "{{ docker_out.ansible_facts.docker_container.State.Pid }}"
+  - name: See whether VETH device exists
+    stat:
+      path: /sys/devices/virtual/net/web3_veth1
+    register: veth_stat_results
+  - name: Delete VETH device if it exists
+    shell: |
+      ip link del web3_veth1
+    when: veth_stat_results.stat.exists == True
+  - name: Create VETH pair for container web3
+    shell: |
+      ip link add web3_veth0 type veth peer name web3_veth1
+  - name: Move web3_veth0 into container namespace
+    shell: |
+      ip link set web3_veth0 netns {{ web3PID }}
+
+  # Repeat the entire process for a second container - of course this could
+  # be moved into a role in a later iteration
+  - name: Start a docker container running nginx
+    docker_container:
+      auto_remove: yes
+      detach: yes
+      image: "{{ image }}"
+      name: web4
+      network_mode: none      
+      state: started
+    register: docker_out
+  - name: Capture PID of container
+    set_fact:
+      web4PID: "{{ docker_out.ansible_facts.docker_container.State.Pid }}"
+  - name: See whether VETH device exists
+    stat:
+      path: /sys/devices/virtual/net/web4_veth1
+    register: veth_stat_results
+    # To make the script idempotent, we delete the
+    # VETH device if it has already been created
+  - name: Delete VETH device if it exists
+    shell: |
+      ip link del web4_veth1
+    when: veth_stat_results.stat.exists == True
+  - name: Create VETH pair for container web1
+    shell: |
+      ip link add web4_veth0 type veth peer name web4_veth1
+  - name: Move web4_veth0 into container namespace
+    shell: |
+      ip link set web4_veth0 netns {{ web4PID }}
+
+
+  # Now set set up the actual bridge and add the two
+  # VETH interfaces
+  - name: Delete OVS bridge if it exists
+    shell: |
+      ovs-vsctl --if-exists del-br myBridge
+  - name: Create OVS bridge myBridge and add port web3_veth1 and web4_veth1
+    shell: ovs-vsctl add-br myBridge -- add-port myBridge web3_veth1 -- add-port myBridge web4_veth1
+
+
+  # Assign IP address to both veth endpoints and bring all devices up
+  - name: Assign IP addresses and bring up devices
+    shell: |
+      nsenter -t {{ web3PID }} -n ip addr add  172.16.0.3/12 dev web3_veth0
+      nsenter -t {{ web3PID }} -n ip link set web3_veth0 up
+      ip link set web3_veth1 up
+      nsenter -t {{ web4PID }} -n ip addr add  172.16.0.4/12 dev web4_veth0
+      nsenter -t {{ web4PID }} -n ip link set web4_veth0 up
+      ip link set web4_veth1 up
+
+
+
+  # Finally we add a VXLAN port to establish a tunnel via the enp0s8 device
+  - name: Add VXLAN port vxlan0
+    shell: ovs-vsctl add-port myBridge vxlan0 -- set interface vxlan0 type=vxlan options:remote_ip=192.168.50.4 options:dst_port=4789 options:ttl=5
