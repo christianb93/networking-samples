@@ -93,7 +93,6 @@
       bridge: myBridge
       port: "{{ item }}"
       state: present
-      set: "interface {{ item }}"
     loop:
       - web1_veth1
       - web2_veth1
