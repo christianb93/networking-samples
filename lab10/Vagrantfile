@@ -24,6 +24,7 @@ Vagrant.configure("2") do |config|
     boxA.vm.provision "ansible", run: "always" do |ansible|
       ansible.playbook = "boxA.yaml"
       ansible.compatibility_mode = "2.0"
+      ansible.extra_vars = { ansible_python_interpreter:"/usr/bin/python3" }
     end
   end
 
@@ -38,6 +39,7 @@ Vagrant.configure("2") do |config|
     boxB.vm.provision "ansible", run: "always" do |ansible|
       ansible.playbook = "boxB.yaml"
       ansible.compatibility_mode = "2.0"
+      ansible.extra_vars = { ansible_python_interpreter:"/usr/bin/python3" }
     end
   end
 
@@ -51,6 +53,7 @@ Vagrant.configure("2") do |config|
     boxC.vm.provision "ansible", run: "always" do |ansible|
       ansible.playbook = "boxC.yaml"
       ansible.compatibility_mode = "2.0"
+      ansible.extra_vars = { ansible_python_interpreter:"/usr/bin/python3" }
     end
   end
 
