@@ -29,3 +29,22 @@ ip netns exec router \
    iptables -t filter \
    -A FORWARD \
    -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Perform DNAT for traffic on port 8800 coming 
+# from the public network
+ip netns exec router \
+  iptables -t nat -A PREROUTING \
+  -p tcp \
+  -i veth2 \
+  --destination-port 8800 \
+  -j DNAT \
+  --to-destination 172.16.100.5:8800
+
+# Forward traffic targeted to port 8800 of boxA
+ip netns exec router \
+  iptables -t filter -A FORWARD \
+  -p tcp \
+  -i veth2 \
+  --destination-port 8800 \
+  -d 172.16.100.5 \
+  -j ACCEPT
